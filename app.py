@@ -9,15 +9,13 @@ import os
 # ------------------------------------------------------------------------------------
 # Streamlit App: Soil Sense
 # ------------------------------------------------------------------------------------
-# Comment blocks throughout are in English, explaining each section and function.
+# All comments are written in English for clarity.
 # ------------------------------------------------------------------------------------
 
-# Set up the page configuration: title, icon, and layout
+# 1. Page configuration: title, icon, layout
 st.set_page_config(page_title="Soil Sense", page_icon="🌱", layout="wide")
 
-# ------------------------------------------------------------------------------------
-# Custom CSS for a green-themed interface
-# ------------------------------------------------------------------------------------
+# 2. Custom CSS for a green-themed UI
 st.markdown(
     """
     <style>
@@ -48,12 +46,9 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ------------------------------------------------------------------------------------
-# Logo and Title
-# ------------------------------------------------------------------------------------
+# 3. Logo and Title
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    # Display the Soil Sense logo (make sure attached_assets/soilsense_logo.png exists)
     st.image("attached_assets/soilsense_logo.png", width=300)
 
 st.markdown('<h1 class="main-header">Soil Sense</h1>', unsafe_allow_html=True)
@@ -112,7 +107,6 @@ def get_available_experiments():
     experiments.sort(key=lambda x: int(x.replace("Experiment", "")), reverse=True)
     return experiments
 
-# Get the list of experiment names that exist
 available_experiments = get_available_experiments()
 
 if available_experiments:
@@ -263,18 +257,12 @@ def create_sensor_plots(df):
     if df.empty:
         return []
 
-    # These index lists are 0-based, matching the columns order above
-    co2_indices = [1, 4, 7, 10]
-    temp_indices = [2, 5, 8, 11]
-    humidity_indices = [3, 6, 9, 12]
-    oxygen_indices = [13, 14, 15, 16]
-    oxygen_temp_indices = [17, 18, 19, 20]
-
-    co2_sensors = [df.columns[i] for i in co2_indices if i < len(df.columns)]
-    temp_sensors = [df.columns[i] for i in temp_indices if i < len(df.columns)]
-    humidity_sensors = [df.columns[i] for i in humidity_indices if i < len(df.columns)]
-    oxygen_sensors = [df.columns[i] for i in oxygen_indices if i < len(df.columns)]
-    oxygen_temp_sensors = [df.columns[i] for i in oxygen_temp_indices if i < len(df.columns)]
+    # Identify sensor columns by prefix or index logic if needed
+    co2_sensors = [col for col in df.columns if col.startswith("CO2")]
+    temp_sensors = [col for col in df.columns if col.startswith("Temperature")]
+    humidity_sensors = [col for col in df.columns if col.startswith("RH")]
+    oxygen_sensors = [col for col in df.columns if col.startswith("oxygenDa")]
+    oxygen_temp_sensors = [col for col in df.columns if col.startswith("oxygenBo_airTemp")]
 
     plots = []
 
@@ -314,7 +302,7 @@ def create_sensor_plots(df):
                 )
             )
         fig_temp.update_layout(
-            title="🌡 Temperature Readings (°C)",
+            title="🌡️ Temperature Readings (°C)",
             xaxis_title="Time",
             yaxis_title="Temperature (°C)",
             hovermode="x unified",
@@ -380,7 +368,7 @@ def create_sensor_plots(df):
                 )
             )
         fig_oxygen_temp.update_layout(
-            title="🌡 Oxygen Sensor Temperature (°C)",
+            title="🌡️ Oxygen Sensor Temperature (°C)",
             xaxis_title="Time",
             yaxis_title="Temperature (°C)",
             hovermode="x unified",
@@ -420,4 +408,698 @@ def check_sensor_thresholds(df, thresholds):
     """
     Given the latest row of df and a thresholds dictionary, compare each sensor reading
     to its min/max thresholds and return a list of alert dictionaries.
-    Each alert dict contains: sensor nam
+    Each alert dict contains: sensor name, message, current value, threshold, severity, timestamp.
+    """
+    if df.empty or len(df) == 0:
+        return []
+
+    alerts = []
+    latest_row = df.iloc[-1]
+    current_time = datetime.now()
+
+    # CO2 sensors
+    co2_columns = [col for col in df.columns if col.startswith("CO2")]
+    for col in co2_columns:
+        value = latest_row[col]
+        if value < thresholds["co2"]["min"]:
+            alerts.append({
+                "sensor": col,
+                "message": "CO2 level too low",
+                "current_value": value,
+                "threshold": thresholds["co2"]["min"],
+                "severity": "medium",
+                "timestamp": current_time
+            })
+        elif value > thresholds["co2"]["max"]:
+            alerts.append({
+                "sensor": col,
+                "message": "CO2 level too high",
+                "current_value": value,
+                "threshold": thresholds["co2"]["max"],
+                "severity": "high",
+                "timestamp": current_time
+            })
+
+    # Temperature sensors
+    temp_columns = [col for col in df.columns if col.startswith("Temperature")]
+    for col in temp_columns:
+        value = latest_row[col]
+        if value < thresholds["temperature"]["min"]:
+            alerts.append({
+                "sensor": col,
+                "message": "Temperature too low",
+                "current_value": value,
+                "threshold": thresholds["temperature"]["min"],
+                "severity": "high",
+                "timestamp": current_time
+            })
+        elif value > thresholds["temperature"]["max"]:
+            alerts.append({
+                "sensor": col,
+                "message": "Temperature too high",
+                "current_value": value,
+                "threshold": thresholds["temperature"]["max"],
+                "severity": "high",
+                "timestamp": current_time
+            })
+
+    # Humidity sensors
+    humidity_columns = [col for col in df.columns if col.startswith("RH")]
+    for col in humidity_columns:
+        value = latest_row[col]
+        if value < thresholds["humidity"]["min"]:
+            alerts.append({
+                "sensor": col,
+                "message": "Humidity too low",
+                "current_value": value,
+                "threshold": thresholds["humidity"]["min"],
+                "severity": "medium",
+                "timestamp": current_time
+            })
+        elif value > thresholds["humidity"]["max"]:
+            alerts.append({
+                "sensor": col,
+                "message": "Humidity too high",
+                "current_value": value,
+                "threshold": thresholds["humidity"]["max"],
+                "severity": "medium",
+                "timestamp": current_time
+            })
+
+    # Battery voltage (if present in DataFrame)
+    if "Battery_Volt" in df.columns:
+        value = latest_row["Battery_Volt"]
+        if value < thresholds["battery"]["min"]:
+            alerts.append({
+                "sensor": "Battery_Volt",
+                "message": "Battery voltage low",
+                "current_value": value,
+                "threshold": thresholds["battery"]["min"],
+                "severity": "high",
+                "timestamp": current_time
+            })
+
+    return alerts
+
+# ------------------------------------------------------------------------------------
+# Load the data once the user selects an experiment
+# ------------------------------------------------------------------------------------
+df = load_experiment_data(selected_experiment) if selected_experiment else pd.DataFrame()
+
+if not df.empty:
+    # Display success message with the selected experiment name
+    st.success(f"✅ Data loaded from: {selected_experiment}")
+
+    # --------------------------------------------------------------------------------
+    # DEBUG: Show the raw DataFrame preview and dtypes (visible in the UI)
+    # --------------------------------------------------------------------------------
+    st.subheader("🐛 Debug: Raw DataFrame Preview")
+    st.write("Shape:", df.shape)
+    st.dataframe(df.head(5))
+    st.write("Dtypes:", df.dtypes.to_dict())
+
+    # --------------------------------------------------------------------------------
+    # Main Application Interface: Tabs for Time Series, Statistics, Correlations, Alerts
+    # --------------------------------------------------------------------------------
+    st.markdown("---")
+    st.markdown('<h3 style="color: #2E7D32;">📈 Soil Sense Data Analysis</h3>', unsafe_allow_html=True)
+
+    # Display overall data info: number of records and time range
+    st.write(f"📊 **Records**: {len(df)}")
+    if "timestamp" in df.columns and len(df) > 0:
+        st.write(
+            f"⏰ **Time Range**: "
+            f"{df['timestamp'].min().strftime('%Y-%m-%d %H:%M')} to "
+            f"{df['timestamp'].max().strftime('%Y-%m-%d %H:%M')}"
+        )
+
+    # Determine sensor columns (all except timestamp)
+    sensor_columns = [col for col in df.columns if col != "timestamp"]
+
+    # Create 4 tabs: Time Series, Statistics, Correlations, Alert System
+    viz_tab1, viz_tab2, viz_tab3, alert_tab = st.tabs(
+        ["📈 Time Series", "📊 Statistics", "🔄 Correlations", "🚨 Alert System"]
+    )
+
+    # --------------------------------------------------------------------------------
+    # Tab 1: Time Series Visualization
+    # --------------------------------------------------------------------------------
+    with viz_tab1:
+        st.subheader("Time Range Selection")
+
+        # Determine min and max timestamps in the dataset
+        min_time = df["timestamp"].min()
+        max_time = df["timestamp"].max()
+
+        # Create two columns to allow user to pick start and end date/time
+        col1, col2 = st.columns(2)
+        with col1:
+            start_date = st.date_input(
+                "Start Date",
+                value=min_time.date(),
+                min_value=min_time.date(),
+                max_value=max_time.date()
+            )
+            start_time = st.time_input("Start Time", value=min_time.time())
+        with col2:
+            end_date = st.date_input(
+                "End Date",
+                value=max_time.date(),
+                min_value=min_time.date(),
+                max_value=max_time.date()
+            )
+            end_time = st.time_input("End Time", value=max_time.time())
+
+        # Combine date and time into a single datetime object
+        start_datetime = pd.to_datetime(f"{start_date} {start_time}")
+        end_datetime = pd.to_datetime(f"{end_date} {end_time}")
+
+        if start_datetime <= end_datetime:
+            filtered_df = df[
+                (df["timestamp"] >= start_datetime) &
+                (df["timestamp"] <= end_datetime)
+            ]
+
+            # ==== DEBUG BLOCK for Filtered DataFrame ====
+            st.subheader("🐞 Debug: Filtered DataFrame Preview")
+            st.write("Shape of filtered_df:", filtered_df.shape)
+            st.write("Filtered dtypes:", filtered_df.dtypes.to_dict())
+            st.dataframe(filtered_df.head(5), use_container_width=True)
+            # ==== END DEBUG BLOCK ====
+
+            if not filtered_df.empty:
+                # **IMPORTANT**: sort before plotting
+                filtered_df = filtered_df.sort_values("timestamp").reset_index(drop=True)
+
+                # Additional DEBUG: Show timestamp vs. CO2 values before plotting
+                st.subheader("🐞 Debug: Timestamp vs. CO2 Values")
+                if "CO2SCD30A [ppm]" in filtered_df.columns:
+                    st.dataframe(filtered_df[["timestamp", "CO2SCD30A [ppm]"]].head(5), use_container_width=True)
+
+                # Create and display separate plots for each sensor type
+                plots = create_sensor_plots(filtered_df)
+                for plot_title, fig in plots:
+                    st.subheader(plot_title)
+                    st.plotly_chart(fig, use_container_width=True)
+
+                st.write(f"📊 Showing {len(filtered_df)} data points from {start_datetime} to {end_datetime}")
+                st.markdown("---")
+                with st.expander("View Filtered Raw Data", expanded=False):
+                    st.subheader("Filtered Raw Data (First 100 rows)")
+                    st.dataframe(filtered_df.head(100), use_container_width=True)
+                    csv = filtered_df.to_csv(index=False)
+                    st.download_button(
+                        label="Download Filtered Dataset",
+                        data=csv,
+                        file_name=f"soil_sense_data_{start_date}_to_{end_date}.csv",
+                        mime="text/csv"
+                    )
+            else:
+                st.warning("No data found in the selected time range.")
+        else:
+            st.error("Start time must be before end time.")
+
+    # --------------------------------------------------------------------------------
+    # Tab 2: Sensor Statistics and Latest Readings
+    # --------------------------------------------------------------------------------
+    with viz_tab2:
+        st.subheader("Sensor Statistics")
+
+        # Build a summary table (min, max, average, std) for each sensor column
+        stats = []
+        for col in sensor_columns:
+            stats.append({
+                "Sensor": col,
+                "Min": f"{df[col].min():.1f}",
+                "Max": f"{df[col].max():.1f}",
+                "Average": f"{df[col].mean():.1f}",
+                "Std Dev": f"{df[col].std():.1f}"
+            })
+        st.table(pd.DataFrame(stats))
+
+        # Display the latest readings (last timestamp) with a comparison arrow from the previous reading
+        st.subheader("Latest Readings")
+        latest = df.iloc[-1:].copy()
+        latest_time = latest["timestamp"].iloc[0]
+        st.write(f"Time: {latest_time}")
+
+        # Determine how many sensors to show per row
+        sensors_per_row = max(1, len(sensor_columns) // 2)
+
+        # First row of metrics
+        if len(sensor_columns) > 0:
+            first_row_sensors = sensor_columns[:sensors_per_row]
+            cols1 = st.columns(len(first_row_sensors))
+            for i, sensor in enumerate(first_row_sensors):
+                if len(df) >= 2:
+                    prev_value = df.iloc[-2][sensor]
+                    current_value = latest[sensor].iloc[0]
+                    delta = current_value - prev_value
+                else:
+                    current_value = latest[sensor].iloc[0]
+                    delta = 0.0
+
+                with cols1[i]:
+                    st.markdown(f"""
+                        <div style="border: 1px solid #e0e0e0; padding: 8px; border-radius: 4px; text-align: center;">
+                            <p style="font-size: 10px; margin: 0; color: #666;">{sensor}</p>
+                            <p style="font-size: 18px; margin: 2px 0; font-weight: bold;">{current_value:.1f}</p>
+                            <p style="font-size: 12px; margin: 0; color: {'green' if delta >= 0 else 'red'};">
+                                {'↑' if delta > 0 else '↓' if delta < 0 else '→'} {delta:.1f}
+                            </p>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+        # Second row of metrics
+        if len(sensor_columns) > sensors_per_row:
+            second_row_sensors = sensor_columns[sensors_per_row:]
+            cols2 = st.columns(len(second_row_sensors))
+            for i, sensor in enumerate(second_row_sensors):
+                if len(df) >= 2:
+                    prev_value = df.iloc[-2][sensor]
+                    current_value = latest[sensor].iloc[0]
+                    delta = current_value - prev_value
+                else:
+                    current_value = latest[sensor].iloc[0]
+                    delta = 0.0
+
+                with cols2[i]:
+                    st.markdown(f"""
+                        <div style="border: 1px solid #e0e0e0; padding: 8px; border-radius: 4px; text-align: center;">
+                            <p style="font-size: 10px; margin: 0; color: #666;">{sensor}</p>
+                            <p style="font-size: 18px; margin: 2px 0; font-weight: bold;">{current_value:.1f}</p>
+                            <p style="font-size: 12px; margin: 0; color: {'green' if delta >= 0 else 'red'};">
+                                {'↑' if delta > 0 else '↓' if delta < 0 else '→'} {delta:.1f}
+                            </p>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+        # --------------------------------------------------------------------------------
+        # CO2 Regression Analysis Section
+        # --------------------------------------------------------------------------------
+        st.subheader("CO2 Regression Analysis")
+
+        # Identify all CO2 sensor columns
+        co2_sensors = [col for col in sensor_columns if "CO2" in col]
+
+        if co2_sensors:
+            selected_co2_sensor = st.selectbox(
+                "Select CO2 sensor for regression analysis:", 
+                co2_sensors
+            )
+            regression_type = st.selectbox(
+                "Select regression type:", 
+                ["Linear", "Exponential", "Logarithmic"]
+            )
+
+            if selected_co2_sensor and len(df) >= 10:
+                # Prepare data for regression: drop NA, convert timestamp to hours since start
+                df_reg = df[["timestamp", selected_co2_sensor]].dropna().copy()
+                df_reg["hours"] = (
+                    df_reg["timestamp"] - df_reg["timestamp"].min()
+                ).dt.total_seconds() / 3600.0
+
+                x = df_reg["hours"].values
+                y = df_reg[selected_co2_sensor].values
+
+                # Enforce maximum of 40,000 ppm for CO2
+                y = np.minimum(y, 40000)
+
+                # User input for how many hours ahead to predict
+                st.write("**Prediction Settings**")
+                prediction_hours = st.number_input(
+                    "Predict ahead (hours)",
+                    min_value=1,
+                    max_value=168,
+                    value=24
+                )
+
+                try:
+                    from sklearn.preprocessing import PolynomialFeatures
+                    from sklearn.linear_model import LinearRegression
+                    from sklearn.pipeline import Pipeline
+                    from scipy import stats
+                    from sklearn.metrics import r2_score
+
+                    # Placeholder variables for regression outputs
+                    y_pred = None
+                    slope = intercept = r_value = p_value = std_err = 0.0
+
+                    if regression_type == "Linear":
+                        # Linear regression on x vs y
+                        model = LinearRegression()
+                        X = x.reshape(-1, 1)
+                        model.fit(X, y)
+                        y_pred = model.predict(X)
+                        y_pred = np.minimum(y_pred, 40000)
+
+                        # Calculate line of best fit stats
+                        slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+                        equation = f"CO₂ = {slope:.4f}t + {intercept:.2f}"
+
+                        # Fix potential p_value = 0 or NaN issues
+                        if np.isnan(p_value) or p_value <= 0:
+                            n = len(x)
+                            if n > 2:
+                                t_stat = slope / (std_err + 1e-10)
+                                p_value = 2 * (1 - stats.t.cdf(abs(t_stat), n - 2))
+                            else:
+                                p_value = 1.0
+
+                        future_x = x[-1] + prediction_hours
+                        future_pred = model.predict([[future_x]])[0]
+
+                    elif regression_type == "Exponential":
+                        # Exponential regression (log transform on y)
+                        y_positive = np.maximum(y, 1)
+                        log_y = np.log(y_positive)
+                        model = LinearRegression()
+                        X = x.reshape(-1, 1)
+                        model.fit(X, log_y)
+                        log_y_pred = model.predict(X)
+                        y_pred = np.exp(log_y_pred)
+                        y_pred = np.minimum(y_pred, 40000)
+
+                        slope, intercept, r_value, p_value, std_err = stats.linregress(x, log_y)
+                        equation = f"CO₂ = {np.exp(intercept):.4f} * e^({slope:.4f}t)"
+
+                        future_x = x[-1] + prediction_hours
+                        future_log_pred = model.predict([[future_x]])[0]
+                        future_pred = np.exp(future_log_pred)
+
+                    elif regression_type == "Logarithmic":
+                        # Logarithmic regression (log transform on x)
+                        x_positive = np.maximum(x, 0.1)
+                        log_x = np.log(x_positive + 1)
+                        model = LinearRegression()
+                        X = log_x.reshape(-1, 1)
+                        model.fit(X, y)
+                        y_pred = model.predict(X)
+                        y_pred = np.minimum(y_pred, 40000)
+
+                        slope, intercept, r_value, p_value, std_err = stats.linregress(log_x, y)
+                        equation = f"CO₂ = {slope:.4f} * ln(t+1) + {intercept:.2f}"
+
+                        future_x = x[-1] + prediction_hours
+                        future_log_x = np.log(max(future_x, 0.1) + 1)
+                        future_pred = model.predict([[future_log_x]])[0]
+
+                    # Cap future prediction at 40,000 ppm
+                    future_pred = min(future_pred, 40000)
+                    r2 = r2_score(y, y_pred)
+
+                    # Build the regression plot
+                    fig_reg = go.Figure()
+                    fig_reg.add_trace(
+                        go.Scatter(
+                            x=df_reg["timestamp"],
+                            y=y,
+                            mode="markers",
+                            name="Actual Data",
+                            marker=dict(color="blue", size=4)
+                        )
+                    )
+                    fig_reg.add_trace(
+                        go.Scatter(
+                            x=df_reg["timestamp"],
+                            y=y_pred,
+                            mode="lines",
+                            name=f"{regression_type} Regression",
+                            line=dict(color="red", width=2)
+                        )
+                    )
+                    future_time = df_reg["timestamp"].iloc[-1] + pd.Timedelta(hours=prediction_hours)
+                    fig_reg.add_trace(
+                        go.Scatter(
+                            x=[future_time],
+                            y=[future_pred],
+                            mode="markers",
+                            name=f"Prediction ({prediction_hours}h)",
+                            marker=dict(color="orange", size=12, symbol="star")
+                        )
+                    )
+                    # Add a horizontal line at 40,000 ppm
+                    fig_reg.add_hline(
+                        y=40000,
+                        line_dash="dash",
+                        line_color="orange",
+                        annotation_text="CO2 Limit (40,000 ppm)"
+                    )
+                    fig_reg.update_layout(
+                        title=f"{regression_type} Regression Analysis for {selected_co2_sensor}",
+                        xaxis_title="Time",
+                        yaxis_title="CO2 (ppm)",
+                        hovermode="x unified",
+                        height=400
+                    )
+                    st.plotly_chart(fig_reg, use_container_width=True)
+
+                    # Display regression statistics and equation
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if p_value < 0.001:
+                            p_value_str = f"{p_value:.2e}"
+                        else:
+                            p_value_str = f"{p_value:.6f}"
+
+                        st.info(
+                            f"""
+                            **Regression Statistics:**
+                            - Type: {regression_type}
+                            - R-squared: {r2:.4f}
+                            - P-value: {p_value_str}
+                            - Data points: {len(y)}
+                            """
+                        )
+                    with col2:
+                        st.info(
+                            f"""
+                            **Equation:**
+                            {equation}
+
+                            **Prediction:**
+                            In {prediction_hours} hours: {future_pred:.1f} ppm
+                            """
+                        )
+
+                    # Interpret the p-value for significance
+                    if p_value < 0.001:
+                        p_interpretation = "Highly significant (p < 0.001)"
+                    elif p_value < 0.01:
+                        p_interpretation = "Very significant (p < 0.01)"
+                    elif p_value < 0.05:
+                        p_interpretation = "Significant (p < 0.05)"
+                    else:
+                        p_interpretation = "Not statistically significant (p ≥ 0.05)"
+                    st.write(f"**Statistical Significance:** {p_interpretation}")
+
+                    if future_pred >= 40000:
+                        st.warning("⚠️ Predicted CO2 level hits the maximum constraint (40,000 ppm)")
+
+                    # ------------------------------------------------------------------------------------
+                    # Model Comparison: Run all three regressions and compare R² and p-values
+                    # ------------------------------------------------------------------------------------
+                    st.subheader("📊 Model Comparison")
+                    comparison_results = {}
+
+                    for model_type in ["Linear", "Exponential", "Logarithmic"]:
+                        try:
+                            if model_type == "Linear":
+                                temp_model = LinearRegression()
+                                temp_X = x.reshape(-1, 1)
+                                temp_model.fit(temp_X, y)
+                                temp_y_pred = temp_model.predict(temp_X)
+                                temp_slope, temp_intercept, temp_r_value, temp_p_value, temp_std_err = stats.linregress(x, y)
+
+                            elif model_type == "Exponential":
+                                temp_y_positive = np.maximum(y, 1)
+                                temp_log_y = np.log(temp_y_positive)
+                                temp_model = LinearRegression()
+                                temp_X = x.reshape(-1, 1)
+                                temp_model.fit(temp_X, temp_log_y)
+                                temp_log_y_pred = temp_model.predict(temp_X)
+                                temp_y_pred = np.exp(temp_log_y_pred)
+                                temp_slope, temp_intercept, temp_r_value, temp_p_value, temp_std_err = stats.linregress(x, temp_log_y)
+
+                            elif model_type == "Logarithmic":
+                                temp_x_positive = np.maximum(x, 0.1)
+                                temp_log_x = np.log(temp_x_positive + 1)
+                                temp_model = LinearRegression()
+                                temp_X = temp_log_x.reshape(-1, 1)
+                                temp_model.fit(temp_X, y)
+                                temp_y_pred = temp_model.predict(temp_X)
+                                temp_slope, temp_intercept, temp_r_value, temp_p_value, temp_std_err = stats.linregress(temp_log_x, y)
+
+                            temp_y_pred = np.minimum(temp_y_pred, 40000)
+                            temp_r2 = r2_score(y, temp_y_pred)
+
+                            # Fix p-value if needed
+                            if np.isnan(temp_p_value) or temp_p_value <= 0:
+                                n = len(x)
+                                if n > 2:
+                                    t_stat = temp_slope / (temp_std_err + 1e-10)
+                                    temp_p_value = 2 * (1 - stats.t.cdf(abs(t_stat), n - 2))
+                                else:
+                                    temp_p_value = 1.0
+
+                            comparison_results[model_type] = {
+                                "r2": temp_r2,
+                                "p_value": temp_p_value,
+                                "slope": temp_slope,
+                                "intercept": temp_intercept
+                            }
+                        except:
+                            comparison_results[model_type] = {
+                                "r2": 0.0,
+                                "p_value": 1.0,
+                                "slope": 0.0,
+                                "intercept": 0.0
+                            }
+
+                    # Determine the best model by highest R²
+                    best_model = max(comparison_results.keys(), key=lambda k: comparison_results[k]["r2"])
+                    best_r2 = comparison_results[best_model]["r2"]
+
+                    # Count how many models are statistically significant
+                    significance_count = sum(1 for result in comparison_results.values() if result["p_value"] < 0.05)
+                    highly_significant_count = sum(1 for result in comparison_results.values() if result["p_value"] < 0.001)
+
+                    if highly_significant_count == 3:
+                        significance_text = "All three models showed a statistically significant relationship (p < 0.001)."
+                    elif significance_count == 3:
+                        significance_text = "All three models showed a statistically significant relationship (p < 0.05)."
+                    elif significance_count == 2:
+                        sig_models = [m for m, r in comparison_results.items() if r["p_value"] < 0.05]
+                        significance_text = f"Two models ({', '.join(sig_models)}) showed statistically significant relationships (p < 0.05)."
+                    elif significance_count == 1:
+                        sig_model = [m for m, r in comparison_results.items() if r["p_value"] < 0.05][0]
+                        significance_text = f"Only the {sig_model} model showed a statistically significant relationship (p < 0.05)."
+                    else:
+                        significance_text = "None of the models showed statistically significant relationships (p ≥ 0.05)."
+
+                    comparison_text = (
+                        f"{significance_text} The {best_model.lower()} model provided the best fit (R² = {best_r2:.4f})."
+                    )
+                    st.info(f"**Model Comparison Summary:**\n{comparison_text}")
+
+                    # Build a comparison table of R² and P-values
+                    comparison_df = pd.DataFrame.from_dict(comparison_results, orient="index")
+                    comparison_df["Model"] = comparison_df.index
+                    comparison_df = comparison_df[["Model", "r2", "p_value"]]
+                    comparison_df.columns = ["Model Type", "R² Score", "P-value"]
+                    comparison_df["R² Score"] = comparison_df["R² Score"].round(4)
+                    comparison_df["P-value"] = comparison_df["P-value"].apply(
+                        lambda x: f"{x:.2e}" if x < 0.001 else f"{x:.6f}"
+                    )
+                    st.dataframe(comparison_df, use_container_width=True)
+
+                except ImportError:
+                    st.error("Regression analysis requires scikit-learn. Please install it to use this feature.")
+                except Exception as e:
+                    st.error(f"Error performing regression analysis: {str(e)}")
+
+            elif selected_co2_sensor and len(df) < 10:
+                st.warning("Need at least 10 data points for regression analysis.")
+        else:
+            st.info("No CO2 sensors found in the dataset.")
+
+    # --------------------------------------------------------------------------------
+    # Tab 3: Sensor Correlations
+    # --------------------------------------------------------------------------------
+    with viz_tab3:
+        st.subheader("Sensor Correlations")
+
+        st.info("""
+        **Correlation Analysis Explanation:**
+
+        The correlation analysis uses the Pearson correlation coefficient between the selected sensor readings.
+        Values range from -1 to +1:
+        - +1.0: Perfect positive correlation
+        - +0.7 to +0.9: Strong positive correlation
+        - +0.3 to +0.7: Moderate positive correlation
+        - -0.3 to +0.3: Weak or no linear correlation
+        - -0.3 to -0.7: Moderate negative correlation
+        - -0.7 to -0.9: Strong negative correlation
+        - -1.0: Perfect negative correlation
+        """)
+
+        correlation_sensors = st.multiselect(
+            "Select sensors for correlation analysis:",
+            sensor_columns,
+            default=sensor_columns if len(sensor_columns) <= 4 else sensor_columns[:4]
+        )
+
+        if len(correlation_sensors) >= 2:
+            corr_fig = create_correlation_heatmap(df, correlation_sensors)
+            st.plotly_chart(corr_fig, use_container_width=True)
+        else:
+            st.info("Please select at least two sensors to view correlations.")
+
+    # --------------------------------------------------------------------------------
+    # Tab 4: Smart Alert System
+    # --------------------------------------------------------------------------------
+    with alert_tab:
+        st.markdown('<h3 style="color: #2E7D32;">🚨 Smart Alert System</h3>', unsafe_allow_html=True)
+        st.write(
+            "Configure automatic notifications when sensor readings exceed your defined thresholds."
+        )
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("📧 Email Notifications")
+            email_enabled = st.checkbox("Enable email alerts", key="email_alerts")
+            if email_enabled:
+                user_email = st.text_input("Your email address:", placeholder="example@email.com")
+        with col2:
+            st.subheader("📱 SMS Notifications")
+            sms_enabled = st.checkbox("Enable SMS alerts", key="sms_alerts")
+            if sms_enabled:
+                user_phone = st.text_input("Your phone number:", placeholder="+1234567890")
+
+        st.subheader("⚙️ Alert Thresholds")
+        thresh_col1, thresh_col2, thresh_col3, thresh_col4 = st.columns(4)
+
+        with thresh_col1:
+            st.write("**CO2 Levels (ppm)**")
+            co2_min = st.number_input("Min CO2:", value=400.0, step=50.0, key="co2_min")
+            co2_max = st.number_input("Max CO2:", value=2000.0, step=50.0, key="co2_max")
+        with thresh_col2:
+            st.write("**Temperature (°C)**")
+            temp_min = st.number_input("Min Temp:", value=15.0, step=1.0, key="temp_min")
+            temp_max = st.number_input("Max Temp:", value=35.0, step=1.0, key="temp_max")
+        with thresh_col3:
+            st.write("**Humidity (%)**")
+            hum_min = st.number_input("Min Humidity:", value=30.0, step=5.0, key="hum_min")
+            hum_max = st.number_input("Max Humidity:", value=90.0, step=5.0, key="hum_max")
+        with thresh_col4:
+            st.write("**Battery (V)**")
+            battery_min = st.number_input("Min Battery:", value=3.5, step=0.1, key="battery_min")
+
+        if st.button("🔍 Check Current Status", type="primary"):
+            thresholds = {
+                "co2": {"min": co2_min, "max": co2_max},
+                "temperature": {"min": temp_min, "max": temp_max},
+                "humidity": {"min": hum_min, "max": hum_max},
+                "battery": {"min": battery_min}
+            }
+
+            alerts = check_sensor_thresholds(df, thresholds)
+            if alerts:
+                st.error(f"🚨 {len(alerts)} Alert(s) Detected!")
+                for alert in alerts:
+                    severity_color = "🔴" if alert["severity"] == "high" else "🟡"
+                    st.warning(
+                        f"{severity_color} **{alert['sensor']}**: {alert['message']} "
+                        f"(Current: {alert['current_value']:.1f})"
+                    )
+
+                if email_enabled and 'user_email' in locals() and user_email:
+                    st.success("📧 Email notification ready!")
+                if sms_enabled and 'user_phone' in locals() and user_phone:
+                    st.success("📱 SMS notification ready!")
+            else:
+                st.success("✅ All sensors are within normal ranges!")
+else:
+    st.error(
+        "No data available. Please check your data source or upload a file."
+    )
