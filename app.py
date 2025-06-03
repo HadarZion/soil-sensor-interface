@@ -250,12 +250,6 @@ def load_experiment_data(experiment_name):
 
     # If no file was found in any of the paths, return an empty DataFrame
     return pd.DataFrame()
-if not df.empty:
-    st.subheader("🐛 Debug: Raw DataFrame Preview")
-    st.write("Shape:", df.shape)
-    st.dataframe(df.head(5))
-    st.write("Dtypes:", df.dtypes.to_dict())
-    # … then continue with the rest of your code …
 
 # ------------------------------------------------------------------------------------
 # Function to create separate Plotly line charts for each sensor category
