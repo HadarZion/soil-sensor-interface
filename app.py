@@ -263,12 +263,18 @@ def create_sensor_plots(df):
     if df.empty:
         return []
 
-    # Identify sensor columns by prefix
-    co2_sensors = [col for col in df.columns if col.startswith("CO2")]
-    temp_sensors = [col for col in df.columns if col.startswith("Temperature")]
-    humidity_sensors = [col for col in df.columns if col.startswith("RH")]
-    oxygen_sensors = [col for col in df.columns if col.startswith("oxygenDa")]
-    oxygen_temp_sensors = [col for col in df.columns if col.startswith("oxygenBo_airTemp")]
+    # These index lists are 0-based, matching the `columns` order above
+    co2_indices = [1, 4, 7, 10]
+    temp_indices = [2, 5, 8, 11]
+    humidity_indices = [3, 6, 9, 12]
+    oxygen_indices = [13, 14, 15, 16]
+    oxygen_temp_indices = [17, 18, 19, 20]
+
+    co2_sensors = [df.columns[i] for i in co2_indices if i < len(df.columns)]
+    temp_sensors = [df.columns[i] for i in temp_indices if i < len(df.columns)]
+    humidity_sensors = [df.columns[i] for i in humidity_indices if i < len(df.columns)]
+    oxygen_sensors = [df.columns[i] for i in oxygen_indices if i < len(df.columns)]
+    oxygen_temp_sensors = [df.columns[i] for i in oxygen_temp_indices if i < len(df.columns)]
 
     plots = []
 
