@@ -54,7 +54,10 @@ st.markdown(
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     # Display the Soil Sense logo (make sure attached_assets/soilsense_logo.png exists)
-    st.image("attached_assets/soilsense_logo.png", width=300)
+    try:
+        st.image("attached_assets/soilsense_logo.png", width=300)
+    except:
+        st.write("🌱 Logo not found")
 
 st.markdown('<h1 class="main-header">Soil Sense</h1>', unsafe_allow_html=True)
 st.markdown(
@@ -263,34 +266,32 @@ def create_sensor_plots(df):
     if df.empty:
         return []
 
-    # These index lists are 0-based, matching the `columns` order above
-    co2_indices = [1, 4, 7, 10]
-    temp_indices = [2, 5, 8, 11]
-    humidity_indices = [3, 6, 9, 12]
-    oxygen_indices = [13, 14, 15, 16]
-    oxygen_temp_indices = [17, 18, 19, 20]
-
-    co2_sensors = [df.columns[i] for i in co2_indices if i < len(df.columns)]
-    temp_sensors = [df.columns[i] for i in temp_indices if i < len(df.columns)]
-    humidity_sensors = [df.columns[i] for i in humidity_indices if i < len(df.columns)]
-    oxygen_sensors = [df.columns[i] for i in oxygen_indices if i < len(df.columns)]
-    oxygen_temp_sensors = [df.columns[i] for i in oxygen_temp_indices if i < len(df.columns)]
-
     plots = []
+    
+    # Get all column names except timestamp
+    all_columns = [col for col in df.columns if col != 'timestamp']
+    
+    # Dynamically identify sensor categories by column name patterns
+    co2_sensors = [col for col in all_columns if 'CO2' in col and 'ppm' in col]
+    temp_sensors = [col for col in all_columns if 'Temperature' in col and 'SCD30' in col]
+    humidity_sensors = [col for col in all_columns if 'RH' in col and '%' in col]
+    oxygen_sensors = [col for col in all_columns if 'oxygenDa' in col and '%Vol' in col]
+    oxygen_temp_sensors = [col for col in all_columns if 'oxygenBo_airTemp' in col and '°C' in col]
 
     # CO2 Plot
     if co2_sensors:
         fig_co2 = go.Figure()
         for sensor in co2_sensors:
-            fig_co2.add_trace(
-                go.Scatter(
-                    x=df["timestamp"],
-                    y=df[sensor],
-                    mode="lines",
-                    name=sensor,
-                    line=dict(width=2)
+            if sensor in df.columns:
+                fig_co2.add_trace(
+                    go.Scatter(
+                        x=df["timestamp"],
+                        y=df[sensor],
+                        mode="lines",
+                        name=sensor,
+                        line=dict(width=2)
+                    )
                 )
-            )
         fig_co2.update_layout(
             title="🌱 CO2 Levels (ppm)",
             xaxis_title="Time",
@@ -304,17 +305,18 @@ def create_sensor_plots(df):
     if temp_sensors:
         fig_temp = go.Figure()
         for sensor in temp_sensors:
-            fig_temp.add_trace(
-                go.Scatter(
-                    x=df["timestamp"],
-                    y=df[sensor],
-                    mode="lines",
-                    name=sensor,
-                    line=dict(width=2)
+            if sensor in df.columns:
+                fig_temp.add_trace(
+                    go.Scatter(
+                        x=df["timestamp"],
+                        y=df[sensor],
+                        mode="lines",
+                        name=sensor,
+                        line=dict(width=2)
+                    )
                 )
-            )
         fig_temp.update_layout(
-            title="🌡️ Temperature Readings (°C)",
+            title="🌡 Temperature Readings (°C)",
             xaxis_title="Time",
             yaxis_title="Temperature (°C)",
             hovermode="x unified",
@@ -326,15 +328,16 @@ def create_sensor_plots(df):
     if humidity_sensors:
         fig_humidity = go.Figure()
         for sensor in humidity_sensors:
-            fig_humidity.add_trace(
-                go.Scatter(
-                    x=df["timestamp"],
-                    y=df[sensor],
-                    mode="lines",
-                    name=sensor,
-                    line=dict(width=2)
+            if sensor in df.columns:
+                fig_humidity.add_trace(
+                    go.Scatter(
+                        x=df["timestamp"],
+                        y=df[sensor],
+                        mode="lines",
+                        name=sensor,
+                        line=dict(width=2)
+                    )
                 )
-            )
         fig_humidity.update_layout(
             title="💧 Humidity Levels (%)",
             xaxis_title="Time",
@@ -348,15 +351,16 @@ def create_sensor_plots(df):
     if oxygen_sensors:
         fig_oxygen = go.Figure()
         for sensor in oxygen_sensors:
-            fig_oxygen.add_trace(
-                go.Scatter(
-                    x=df["timestamp"],
-                    y=df[sensor],
-                    mode="lines",
-                    name=sensor,
-                    line=dict(width=2)
+            if sensor in df.columns:
+                fig_oxygen.add_trace(
+                    go.Scatter(
+                        x=df["timestamp"],
+                        y=df[sensor],
+                        mode="lines",
+                        name=sensor,
+                        line=dict(width=2)
+                    )
                 )
-            )
         fig_oxygen.update_layout(
             title="🫁 Oxygen Levels (%Vol)",
             xaxis_title="Time",
@@ -370,17 +374,18 @@ def create_sensor_plots(df):
     if oxygen_temp_sensors:
         fig_oxygen_temp = go.Figure()
         for sensor in oxygen_temp_sensors:
-            fig_oxygen_temp.add_trace(
-                go.Scatter(
-                    x=df["timestamp"],
-                    y=df[sensor],
-                    mode="lines",
-                    name=sensor,
-                    line=dict(width=2)
+            if sensor in df.columns:
+                fig_oxygen_temp.add_trace(
+                    go.Scatter(
+                        x=df["timestamp"],
+                        y=df[sensor],
+                        mode="lines",
+                        name=sensor,
+                        line=dict(width=2)
+                    )
                 )
-            )
         fig_oxygen_temp.update_layout(
-            title="🌡️ Oxygen Sensor Temperature (°C)",
+            title="🌡 Oxygen Sensor Temperature (°C)",
             xaxis_title="Time",
             yaxis_title="Temperature (°C)",
             hovermode="x unified",
@@ -401,7 +406,13 @@ def create_correlation_heatmap(df, columns):
     if len(columns) < 2:
         return None
 
-    corr_df = df[columns].corr()
+    # Only use columns that actually exist in the DataFrame
+    valid_columns = [col for col in columns if col in df.columns]
+    
+    if len(valid_columns) < 2:
+        return None
+
+    corr_df = df[valid_columns].corr()
     fig = px.imshow(
         corr_df,
         text_auto=True,
@@ -420,4 +431,87 @@ def check_sensor_thresholds(df, thresholds):
     """
     Given the latest row of df and a thresholds dictionary, compare each sensor reading
     to its min/max thresholds and return a list of alert dictionaries.
-    Each alert dict contains: sensor nam
+    Each alert dict contains: sensor name, current value, threshold type, threshold value
+    """
+    if df.empty:
+        return []
+    
+    alerts = []
+    latest_row = df.iloc[-1]
+    
+    for sensor, threshold_config in thresholds.items():
+        if sensor in df.columns:
+            current_value = latest_row[sensor]
+            
+            if 'min' in threshold_config and current_value < threshold_config['min']:
+                alerts.append({
+                    'sensor': sensor,
+                    'value': current_value,
+                    'type': 'below minimum',
+                    'threshold': threshold_config['min']
+                })
+            
+            if 'max' in threshold_config and current_value > threshold_config['max']:
+                alerts.append({
+                    'sensor': sensor,
+                    'value': current_value,
+                    'type': 'above maximum',
+                    'threshold': threshold_config['max']
+                })
+    
+    return alerts
+
+# ------------------------------------------------------------------------------------
+# Main Application Logic
+# ------------------------------------------------------------------------------------
+if selected_experiment:
+    # Load the selected experiment data
+    df = load_experiment_data(selected_experiment)
+    
+    if not df.empty:
+        st.success(f"✅ Successfully loaded {selected_experiment} with {len(df)} data points")
+        
+        # Display basic statistics
+        st.markdown("---")
+        st.markdown('<h3 style="color: #2E7D32;">📈 Data Overview</h3>', unsafe_allow_html=True)
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Data Points", len(df))
+        with col2:
+            if len(df) > 0:
+                time_range = df['timestamp'].max() - df['timestamp'].min()
+                st.metric("Time Range", f"{time_range.days} days")
+        with col3:
+            sensor_cols = [col for col in df.columns if col != 'timestamp']
+            st.metric("Active Sensors", len(sensor_cols))
+        
+        # Create and display plots
+        st.markdown("---")
+        st.markdown('<h3 style="color: #2E7D32;">📊 Sensor Data Visualization</h3>', unsafe_allow_html=True)
+        
+        plots = create_sensor_plots(df)
+        
+        for plot_title, fig in plots:
+            st.subheader(plot_title)
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # Add data table view
+        st.markdown("---")
+        st.markdown('<h3 style="color: #2E7D32;">📋 Raw Data</h3>', unsafe_allow_html=True)
+        
+        if st.checkbox("Show raw data table"):
+            st.dataframe(df, use_container_width=True)
+        
+        # Display column information for debugging
+        if st.checkbox("Show column information (Debug)"):
+            st.write("DataFrame columns:", df.columns.tolist())
+            st.write("DataFrame shape:", df.shape)
+            st.write("Sample data:")
+            st.write(df.head())
+            
+    else:
+        st.error(f"❌ Could not load data from {selected_experiment}")
+        st.info("Please check if the file exists and has the correct format.")
+else:
+    st.info("Please select an experiment to view data.")
